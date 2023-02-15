@@ -11,7 +11,6 @@ import com.example.memorynotes.R
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class ListFragment : Fragment() {
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -33,5 +32,4 @@ class ListFragment : Fragment() {
             Navigation.findNavController(notesListView).navigate(action)
         }
     }
-
 }
