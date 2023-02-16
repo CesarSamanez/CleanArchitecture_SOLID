@@ -1,13 +1,13 @@
 package com.example.memorynotes.presentation
 
+import android.app.AlertDialog
 import android.content.Context.INPUT_METHOD_SERVICE
 import android.os.Bundle
+import android.view.*
 import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -19,8 +19,14 @@ import com.example.core.data.Note
 
 class NoteFragment : Fragment() {
 
+    private var noteId = 0L
     private lateinit var viewModel: NoteViewModel
     private var currentNote = Note("", "", 0L, 0L)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,9 +40,17 @@ class NoteFragment : Fragment() {
 
         viewModel = ViewModelProviders.of(this).get(NoteViewModel::class.java)
 
+        arguments?.let {
+            noteId = NoteFragmentArgs.fromBundle(it).noteId
+        }
+
         val titleView = view.findViewById<EditText>(R.id.titleView)
         val contentView = view.findViewById<EditText>(R.id.contentView)
         val checkButton = view.findViewById<FloatingActionButton>(R.id.checkButton)
+
+        if (noteId != 0L) {
+            viewModel.getNote(noteId)
+        }
 
         checkButton.setOnClickListener {
             if (titleView.text.toString() != "" || contentView.text.toString() != "") {
@@ -52,10 +66,10 @@ class NoteFragment : Fragment() {
                 Navigation.findNavController(it).popBackStack()
             }
         }
-        observeViewModel(titleView)
+        observeViewModel(titleView, contentView)
     }
 
-    private fun observeViewModel(titleView: EditText) {
+    private fun observeViewModel(titleView: EditText, contentView: EditText) {
         viewModel.saved.observe(viewLifecycleOwner, Observer {
             if (it) {
                 Toast.makeText(context, "Done!", Toast.LENGTH_SHORT).show()
@@ -69,10 +83,42 @@ class NoteFragment : Fragment() {
                 ).show()
             }
         })
+
+        viewModel.currentNote.observe(viewLifecycleOwner, Observer { note ->
+            note?.let {
+                currentNote = it
+                titleView.setText(it.title, TextView.BufferType.EDITABLE)
+                contentView.setText(it.content, TextView.BufferType.EDITABLE)
+            }
+        })
     }
 
     private fun hideKeyboard(titleView: EditText) {
         val imm = context?.getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(titleView.windowToken, 0)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.note_menu, menu)
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.deleteNote -> {
+                if (context != null && noteId != 0L) {
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Delete note")
+                        .setMessage("Are you sure you want to delete this note?")
+                        .setPositiveButton("Yes") { dialogInterface, i ->
+                            viewModel.deleteNote(currentNote)
+                        }
+                        .setNegativeButton("Cancel") { dialogInterface, i -> }
+                        .create()
+                        .show()
+                }
+            }
+        }
+        return true
     }
 }
